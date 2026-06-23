@@ -25,7 +25,7 @@ INBOX           = os.environ.get('SLACK_INBOX_CHANNEL', 'alert-daliy-cargo-test-
 OUTPUT          = os.environ.get('SLACK_OUTPUT_CHANNEL', 'news-cargo')
 DAILY_CARGO_URL = 'https://www.daily-cargo.com/'
 
-GEMINI_MODELS   = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite']
+GEMINI_MODELS   = ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
 REPORT_TRIGGERS = {'日報', '日报', '生成日报', 'レポート'}
 CATEGORY_ORDER  = ['輸送異常', '価格・スペース', '重点業界ニーズ', '政策・通関']
 CATEGORY_EMOJI  = {'輸送異常': '🚨', '価格・スペース': '💰', '重点業界ニーズ': '🏭', '政策・通関': '📜'}
