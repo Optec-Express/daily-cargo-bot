@@ -2,3 +2,4 @@ flask
 google-genai
 requests
 beautifulsoup4
+tzdata
