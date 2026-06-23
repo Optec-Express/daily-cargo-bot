@@ -1,0 +1,15 @@
+# 敏感配置（绝对不推）
+.env
+
+# 运行时文件
+*.pid
+*.log
+archive/
+
+# Python
+__pycache__/
+*.pyc
+
+# 编辑器
+.claude/
+新建 文本文档.txt

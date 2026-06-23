@@ -1,0 +1,6 @@
+slack-bolt
+slack-sdk
+google-genai
+python-dotenv
+requests
+beautifulsoup4
