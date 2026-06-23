@@ -17,12 +17,12 @@ from google.genai import types
 app = Flask(__name__)
 
 # ── Config ────────────────────────────────────────────────────────────────────
-SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '')
-GEMINI_API_KEY  = os.environ.get('GEMINI_API_KEY', '')
-SUPABASE_URL    = os.environ.get('SUPABASE_URL', '')
-SUPABASE_KEY    = os.environ.get('SUPABASE_SERVICE_KEY', '')
-INBOX           = os.environ.get('SLACK_INBOX_CHANNEL', 'alert-daliy-cargo-test-1')
-OUTPUT          = os.environ.get('SLACK_OUTPUT_CHANNEL', 'news-cargo')
+SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '').strip()
+GEMINI_API_KEY  = os.environ.get('GEMINI_API_KEY', '').strip()
+SUPABASE_URL    = os.environ.get('SUPABASE_URL', '').strip()
+SUPABASE_KEY    = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
+INBOX           = os.environ.get('SLACK_INBOX_CHANNEL', 'alert-daliy-cargo-test-1').strip()
+OUTPUT          = os.environ.get('SLACK_OUTPUT_CHANNEL', 'news-cargo').strip()
 DAILY_CARGO_URL = 'https://www.daily-cargo.com/'
 
 GEMINI_MODELS   = ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
