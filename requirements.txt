@@ -1,6 +1,4 @@
-slack-bolt
-slack-sdk
+flask
 google-genai
-python-dotenv
 requests
 beautifulsoup4
