@@ -326,9 +326,9 @@ def format_daily_report(matches):
                 lines.append(a['summary'])
             detail = []
             if a.get('key_data'):
-                detail.append(f'📌 数値: {" / ".join(a["key_data"])}')
+                detail.append(f'📌 数値: {" / ".join(str(x) for x in a["key_data"])}')
             if a.get('routes'):
-                detail.append(f'✈️ 航路: {" / ".join(a["routes"])}')
+                detail.append(f'✈️ 航路: {" / ".join(str(x) for x in a["routes"])}')
             if a.get('impact'):
                 detail.append(f'🎯 自社影響: {a["impact"]}')
             if detail:
