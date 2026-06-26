@@ -161,6 +161,7 @@ def fetch_url_content(urls, max_chars=6000):
             resp = http.get(url, headers={'User-Agent': ua, 'Accept-Language': 'ja,en;q=0.9'},
                             timeout=12)
             resp.raise_for_status()
+            resp.encoding = resp.apparent_encoding or 'utf-8'
             soup = BeautifulSoup(resp.text, 'html.parser')
             for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
                 tag.decompose()
