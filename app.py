@@ -464,7 +464,9 @@ def process_event(ev, row_id):
     lang    = detect_language(text)
     prompt  = FILTER_PROMPT if lang == 'ja' else FILTER_PROMPT_ZH
 
-    if text.strip() in REMOVE_TRIGGERS:
+    clean_text = re.sub(r'<@[A-Z0-9]+>', '', text).strip()
+
+    if clean_text in REMOVE_TRIGGERS:
         thread_ts = ev.get('thread_ts')
         if not thread_ts:
             slack_post(channel, '⚠️ 元の記事のスレッド内で使ってください', thread_ts=ts)
@@ -489,7 +491,7 @@ def process_event(ev, row_id):
         sb_patch(row_id, {'analysis': {'skipped': 'remove_trigger'}})
         return
 
-    if text.strip() in REPORT_TRIGGERS:
+    if clean_text in REPORT_TRIGGERS:
         slack_post(channel, '📋 日報を生成中...', thread_ts=ts)
         try:
             ja_matches = load_today_matches(language='ja')
