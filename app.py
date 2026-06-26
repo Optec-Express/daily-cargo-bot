@@ -35,7 +35,7 @@ KEYCAPS = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩',
            '⑪','⑫','⑬','⑭','⑮','⑯','⑰','⑱','⑲','⑳']
 
 FILTER_PROMPT_ZH = """你是**优铁快运株式会社**（Optec Express）的内容筛选AI。
-从中国货运新闻中，提取与公司业务相关的信息。
+从货运新闻（中文或英文）中，提取与公司业务相关的信息。**所有输出字段必须用中文。**
 
 # 【公司业务背景】
 优铁快运是专注"紧急货物"的国际物流公司：
@@ -127,6 +127,9 @@ def detect_language(text):
     for ch in text:
         if '一' <= ch <= '鿿':
             return 'zh'
+    latin = sum(1 for ch in text if 'a' <= ch.lower() <= 'z')
+    if latin > len(text) * 0.3:
+        return 'en'
     return 'ja'
 
 
@@ -262,7 +265,9 @@ def sb_patch(row_id, data):
 def load_today_matches(language=None):
     today = get_today()
     url = f'{SUPABASE_URL}/rest/v1/articles?date=eq.{today}&matched=eq.true&order=created_at.asc'
-    if language:
+    if isinstance(language, (list, tuple)):
+        url += f'&language=in.({",".join(language)})'
+    elif language:
         url += f'&language=eq.{language}'
     resp = http.get(url, headers=_sb_headers(), timeout=15)
     return resp.json() if resp.status_code == 200 else []
@@ -456,13 +461,13 @@ def process_event(ev, row_id):
     files   = ev.get('files', [])
     source_urls = extract_urls(text)
     lang    = detect_language(text)
-    prompt  = FILTER_PROMPT_ZH if lang == 'zh' else FILTER_PROMPT
+    prompt  = FILTER_PROMPT if lang == 'ja' else FILTER_PROMPT_ZH
 
     if text.strip() in REPORT_TRIGGERS:
         slack_post(channel, '📋 日報を生成中...', thread_ts=ts)
         try:
             ja_matches = load_today_matches(language='ja')
-            zh_matches = load_today_matches(language='zh')
+            zh_matches = load_today_matches(language=['zh', 'en'])
             if not ja_matches and not zh_matches:
                 slack_post(channel, '⚠️ 本日は命中記事がありません', thread_ts=ts)
             else:
@@ -533,8 +538,9 @@ def process_event(ev, row_id):
     })
 
     if result.get('match'):
-        n = len(load_today_matches(language=lang))
-        lang_tag = '🇨🇳' if lang == 'zh' else '🇯🇵'
+        count_lang = 'ja' if lang == 'ja' else ['zh', 'en']
+        n = len(load_today_matches(language=count_lang))
+        lang_tag = '🇯🇵' if lang == 'ja' else ('🇨🇳' if lang == 'zh' else '🌐')
         slack_post(channel, f'✅ {lang_tag} 命中【{result["category"]}】（本日{n}件目）※「日報」で一括送信', thread_ts=ts)
     else:
         slack_post(channel, f'⏭️ 命中せず({result.get("reason", "—")})', thread_ts=ts)
