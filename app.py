@@ -19,6 +19,7 @@ app = Flask(__name__)
 # ── Config ────────────────────────────────────────────────────────────────────
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN', '').strip()
 GEMINI_API_KEY  = os.environ.get('GEMINI_API_KEY', '').strip()
+GEMINI_API_KEY_2 = os.environ.get('GEMINI_API_KEY_2', '').strip()
 SUPABASE_URL    = os.environ.get('SUPABASE_URL', '').strip()
 SUPABASE_KEY    = os.environ.get('SUPABASE_SERVICE_KEY', '').strip()
 INBOX           = os.environ.get('SLACK_INBOX_CHANNEL', 'alert-daliy-cargo-test-1').strip()
@@ -293,40 +294,42 @@ def upload_to_supabase(file_bytes, filename, mime_type):
 
 
 # ── Gemini ────────────────────────────────────────────────────────────────────
-_gemini_client = None
+_gemini_clients = {}
 
 
-def _get_gemini():
-    global _gemini_client
-    if _gemini_client is None:
-        _gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-    return _gemini_client
+def _get_gemini(api_key):
+    if api_key not in _gemini_clients:
+        _gemini_clients[api_key] = genai.Client(api_key=api_key)
+    return _gemini_clients[api_key]
 
 
 def analyze_with_gemini(text=None, image_bytes=None, mime=None, prompt=None):
-    client = _get_gemini()
     parts = [types.Part.from_text(text=prompt or FILTER_PROMPT)]
     if image_bytes:
         parts.append(types.Part.from_bytes(data=image_bytes, mime_type=mime or 'image/png'))
     if text:
         parts.append(types.Part.from_text(text=text))
 
-    for model_name in GEMINI_MODELS:
-        try:
-            resp = client.models.generate_content(
-                model=model_name,
-                contents=[types.Content(role='user', parts=parts)],
-                config=types.GenerateContentConfig(temperature=0.1),
-            )
-            print(f'Gemini OK ({model_name})')
-            return parse_json_loose(resp.text)
-        except Exception as e:
-            err = str(e).lower()
-            print(f'Gemini error ({model_name}): {str(e)[:100]}')
-            if '429' in err or 'resource_exhausted' in err or 'quota' in err:
-                continue  # 配額不足、立刻換下一個模型
-            if '404' not in err:
-                time.sleep(5)  # 其他錯誤稍等後重試
+    keys = [k for k in [GEMINI_API_KEY, GEMINI_API_KEY_2] if k]
+    for key_idx, api_key in enumerate(keys):
+        client = _get_gemini(api_key)
+        key_label = f'key{key_idx + 1}'
+        for model_name in GEMINI_MODELS:
+            try:
+                resp = client.models.generate_content(
+                    model=model_name,
+                    contents=[types.Content(role='user', parts=parts)],
+                    config=types.GenerateContentConfig(temperature=0.1),
+                )
+                print(f'Gemini OK ({key_label}/{model_name})')
+                return parse_json_loose(resp.text)
+            except Exception as e:
+                err = str(e).lower()
+                print(f'Gemini error ({key_label}/{model_name}): {str(e)[:100]}')
+                if '429' in err or 'resource_exhausted' in err or 'quota' in err:
+                    continue
+                if '404' not in err:
+                    time.sleep(5)
     raise RuntimeError('Gemini API 連続失敗（配額不足または全モデルエラー）')
 
 
