@@ -311,15 +311,7 @@ def analyze_with_gemini(text=None, image_bytes=None, mime=None, prompt=None):
     if text:
         parts.append(types.Part.from_text(text=text))
 
-    schedule = [
-        (GEMINI_MODELS[0],  5),
-        (GEMINI_MODELS[1],  8),
-        (GEMINI_MODELS[2], 12),
-        (GEMINI_MODELS[0], 15),
-        (GEMINI_MODELS[1], 20),
-        (GEMINI_MODELS[2],  0),
-    ]
-    for model_name, wait in schedule:
+    for model_name in GEMINI_MODELS:
         try:
             resp = client.models.generate_content(
                 model=model_name,
@@ -331,9 +323,11 @@ def analyze_with_gemini(text=None, image_bytes=None, mime=None, prompt=None):
         except Exception as e:
             err = str(e).lower()
             print(f'Gemini error ({model_name}): {str(e)[:100]}')
-            if wait and '404' not in err:
-                time.sleep(wait)
-    raise RuntimeError('Gemini API 連続失敗')
+            if '429' in err or 'resource_exhausted' in err or 'quota' in err:
+                continue  # 配額不足、立刻換下一個模型
+            if '404' not in err:
+                time.sleep(5)  # 其他錯誤稍等後重試
+    raise RuntimeError('Gemini API 連続失敗（配額不足または全モデルエラー）')
 
 
 # ── Slack ─────────────────────────────────────────────────────────────────────
