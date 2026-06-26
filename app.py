@@ -27,6 +27,7 @@ DAILY_CARGO_URL = 'https://www.daily-cargo.com/'
 
 GEMINI_MODELS   = ['gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite']
 REPORT_TRIGGERS = {'日報', '日报', '生成日报', 'レポート'}
+REMOVE_TRIGGERS = {'移除', '削除', '取消'}
 CATEGORY_ORDER  = ['輸送異常', '価格・スペース', '重点業界ニーズ', '政策・通関', '市場動向・実績']
 CATEGORY_EMOJI  = {'輸送異常': '🚨', '価格・スペース': '💰', '重点業界ニーズ': '🏭', '政策・通関': '📜', '市場動向・実績': '📊'}
 CATEGORY_ORDER_ZH = ['运输异常', '价格・舱位', '重点行业需求', '政策・通关', '市场动向・实绩']
@@ -462,6 +463,31 @@ def process_event(ev, row_id):
     source_urls = extract_urls(text)
     lang    = detect_language(text)
     prompt  = FILTER_PROMPT if lang == 'ja' else FILTER_PROMPT_ZH
+
+    if text.strip() in REMOVE_TRIGGERS:
+        thread_ts = ev.get('thread_ts')
+        if not thread_ts:
+            slack_post(channel, '⚠️ 元の記事のスレッド内で使ってください', thread_ts=ts)
+            sb_patch(row_id, {'analysis': {'skipped': 'remove_no_thread'}})
+            return
+        resp = http.get(
+            f'{SUPABASE_URL}/rest/v1/articles?slack_ts=eq.{url_quote(thread_ts)}&select=id,headline,matched',
+            headers=_sb_headers(), timeout=10,
+        )
+        rows = resp.json() if resp.status_code == 200 else []
+        if not rows:
+            slack_post(channel, '⚠️ 元の記事が見つかりません', thread_ts=ts)
+            sb_patch(row_id, {'analysis': {'skipped': 'remove_not_found'}})
+            return
+        target = rows[0]
+        if not target.get('matched'):
+            slack_post(channel, '⚠️ この記事はすでに日報対象外です', thread_ts=ts)
+            sb_patch(row_id, {'analysis': {'skipped': 'remove_already'}})
+            return
+        sb_patch(target['id'], {'matched': False})
+        slack_post(channel, '🗑️ 日報から除外しました', thread_ts=ts)
+        sb_patch(row_id, {'analysis': {'skipped': 'remove_trigger'}})
+        return
 
     if text.strip() in REPORT_TRIGGERS:
         slack_post(channel, '📋 日報を生成中...', thread_ts=ts)
